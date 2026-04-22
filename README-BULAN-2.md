@@ -5,7 +5,35 @@ Program Studi Ilmu Komputer IPB University 2026
 
 Dokumen ini berisi dokumentasi sementara untuk implementasi replikasi data PostgreSQL antara Primary Database di VM-PRIMARY-BOGOR dan Replica Database di VM-REPLICA-DRC.
 
+## Deskripsi
+
+Bulan 2 berfokus pada implementasi dua sistem utama di atas infrastruktur yang sudah dibangun pada Bulan 1:
+
+1. **Streaming Replication** — sinkronisasi data real-time dari Primary ke Replica menggunakan mekanisme WAL (Write-Ahead Log) PostgreSQL.
+2. **Backup Otomatis** — skrip backup terjadwal dengan tiga strategi (Full, Incremental, Differential), enkripsi AES-256, dan pengiriman terenkripsi ke Replica via SSH.
+
 ## Arsitektur
+
+```
+VM Primary (192.168.218.10)              VM Replica (192.168.218.11)
+┌─────────────────────────┐              ┌─────────────────────────┐
+│  Docker Container       │              │  Docker Container       │
+│  pg-primary (R/W)       │──WAL Stream─▶│  pg-replica (Read-only) │
+│                         │              │                         │
+│  db_kependudukan        │              │  db_kependudukan        │
+│  db_full                │              │  db_full                │
+│  db_inc                 │              │  db_inc                 │
+│  db_diff                │              │  db_diff                │
+└─────────────────────────┘              └─────────────────────────┘
+         │                                         │
+         │  backup.sh (cron)                       │
+         ▼                                         ▼
+  /backup/full/                     ~/backup/received/full/
+  /backup/incremental/              ~/backup/received/incremental/
+  /backup/differential/             ~/backup/received/differential/
+         │                                         ▲
+         └──── rsync + SSH (TLS encrypted) ────────┘
+```
 
 | Komponen | IP Address | Peran |
 | :--- | :--- | :--- |
@@ -13,6 +41,7 @@ Dokumen ini berisi dokumentasi sementara untuk implementasi replikasi data Postg
 | VM-REPLICA-DRC | `192.168.218.11` | Replica database, menerima streaming WAL dan bersifat read-only |
 
 Kedua VM terhubung melalui jaringan Host-only VMware (`VMnet1`).
+
 
 ## 1. Konfigurasi di Primary
 
