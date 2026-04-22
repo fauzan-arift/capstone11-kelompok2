@@ -43,7 +43,7 @@ VM Primary (192.168.218.10)              VM Replica (192.168.218.11)
 Kedua VM terhubung melalui jaringan Host-only VMware (`VMnet1`).
 
 
-## 1. Konfigurasi di Primary
+## Bagian 1 - Konfigurasi di Primary
 
 ### 1.1 Aktifkan Parameter Replikasi
 
@@ -96,7 +96,7 @@ exit
 docker restart pg-primary
 ```
 
-## 2. Konfigurasi di Replica
+## Bagian 2 - Konfigurasi di Replica
 
 ### 2.1 Bersihkan Data Lama
 
@@ -154,7 +154,7 @@ Lalu jalankan:
 docker compose up -d
 ```
 
-## 3. Verifikasi Replikasi
+## Bagian 3 - Verifikasi Replikasi
 
 ### 3.1 Cek Status Streaming
 
@@ -197,51 +197,163 @@ Data harus muncul dalam beberapa detik.
 
 Pastikan database utama seperti `db_kependudukan`, `db_full`, `db_inc`, dan `db_diff` muncul di daftar.
 
-## 4. Jadwal Cron Backup
+## Bagian 4 - Backup Otomatis
 
-Jadwal otomatis backup yang digunakan:
+### Strategi Backup
 
-| Jenis Backup | Waktu | Format Cron |
-| :--- | :--- | :--- |
-| Full | Minggu, 01:00 | `0 1 * * 0` |
-| Incremental | Senin-Sabtu, 02:00 | `0 2 * * 1-6` |
-| Differential | Senin-Sabtu, 03:00 | `0 3 * * 1-6` |
+| Tipe | Frekuensi | Isi | Ukuran Relatif |
+|---|---|---|---|
+| Full | Setiap Minggu 01:00 | Seluruh database | Besar |
+| Incremental | Setiap Sen-Sab 02:00 | Perubahan sejak backup sebelumnya | Kecil |
+| Differential | Setiap Sen-Sab 03:00 | Perubahan sejak full terakhir | Sedang |
 
-Contoh isi `crontab -e`:
+### Keamanan
 
-```cron
-0 1 * * 0 /home/capstone11/pg-setup/backup.sh full >> /backup/logs/cron_full.log 2>&1
-0 2 * * 1-6 /home/capstone11/pg-setup/backup.sh incremental >> /backup/logs/cron_incremental.log 2>&1
-0 3 * * 1-6 /home/capstone11/pg-setup/backup.sh differential >> /backup/logs/cron_differential.log 2>&1
+Sistem backup menggunakan **dua lapis enkripsi**:
+
+| Lapis | Metode | Fungsi |
+|---|---|---|
+| File backup | AES-256-CBC (OpenSSL) | Enkripsi isi file — at-rest |
+| Jalur transfer | SSH/TLS (rsync+ssh) | Enkripsi jalur pengiriman — in-transit |
+
+File `.sql` plaintext **tidak pernah tersimpan permanen** — langsung dihapus setelah dienkripsi menjadi `.sql.enc`.
+
+### Struktur File
+
+```text
+~/pg-setup/
+├── backup.sh           ← skrip utama backup
+├── .env-backup         ← konfigurasi & passphrase (jangan di-commit ke Git)
+├── setup-ssh-aes.sh    ← setup SSH key & test AES (jalankan sekali)
+└── setup-cron.sh       ← setup jadwal otomatis (jalankan sekali)
+
+/backup/
+├── full/
+│   ├── full_db_kependudukan_YYYYMMDD_HHMMSS.sql.enc
+│   ├── full_db_kependudukan_YYYYMMDD_HHMMSS.sql.enc.md5
+│   └── ... (4 database)
+├── incremental/
+│   └── incremental_YYYYMMDD_HHMMSS.tar.gz.enc
+├── differential/
+│   └── diff_db_kependudukan_since_YYYYMMDD_YYYYMMDD_HHMMSS.sql.enc
+└── logs/
+  └── backup_YYYYMMDD_HHMMSS.log
 ```
 
-## 5. Mekanisme Backup
+### Setup (Jalankan Sekali)
 
-Alur kerja backup otomatis:
+**Prasyarat:**
 
-1. Cron memicu `backup.sh` sesuai mode (`full`, `incremental`, atau `differential`).
-2. Skrip melakukan dump database sesuai strategi backup yang dipilih.
-3. File hasil dump langsung dienkripsi menggunakan AES-256.
-4. Sistem membuat checksum MD5 untuk file terenkripsi (`.enc.md5`).
-5. File backup terenkripsi ditransfer ke Replica melalui `rsync` via SSH.
-6. File SQL plaintext dihapus setelah enkripsi selesai.
-7. Aktivitas backup disimpan ke log untuk audit dan troubleshooting.
+```bash
+sudo apt install -y openssl rsync openssh-client
+```
 
-## 6. Ringkasan Keamanan Backup
+**1. Setup SSH key dan test enkripsi:**
 
-| Komponen Keamanan | Implementasi |
-| :--- | :--- |
-| Enkripsi file backup | AES-256 |
-| Enkripsi jalur transfer | SSH (rsync over SSH) |
-| Validasi integritas | MD5 checksum |
-| Kontrol kerahasiaan | Hanya file terenkripsi yang disimpan permanen |
+```bash
+chmod +x setup-ssh-aes.sh backup.sh setup-cron.sh
+./setup-ssh-aes.sh
+```
 
-## 7. Status Sementara Bulan 2
+Skrip ini akan:
+- Generate SSH key di `~/.ssh/backup_key`
+- Kirim public key ke Replica (diminta password sekali)
+- Buat direktori `/backup` di Primary
+- Buat direktori `~/backup/received` di Replica
+- Test enkripsi/dekripsi AES-256
+- Test bahwa passphrase salah ditolak
 
-| Indikator | Status |
-| :--- | :--- |
-| Streaming replication Primary ke Replica | Aktif |
-| Full backup terjadwal | Aktif |
-| Incremental backup terjadwal | Aktif |
-| Differential backup terjadwal | Aktif |
-| Transfer backup ke Replica | Aktif |
+**2. Isi `.env-backup`:**
+
+```env
+PG_USER=admin
+PG_PASSWORD=admin123
+CONTAINER=pg-primary
+REPLICA_USER=capstone11
+REPLICA_IP=192.168.218.11
+REPLICA_BACKUP_DIR=/home/capstone11/backup/received
+SSH_KEY=$HOME/.ssh/backup_key
+BACKUP_AES_PASSPHRASE=C4pst0ne11_AES_S3cur3!
+BACKUP_DIR=/backup
+```
+
+> **Penting:** Jangan commit `.env-backup` ke Git. Tambahkan ke `.gitignore`.
+
+**3. Test backup manual:**
+
+```bash
+./backup.sh full
+```
+
+**4. Aktifkan jadwal otomatis:**
+
+```bash
+./setup-cron.sh
+crontab -l
+```
+
+### Penggunaan Manual
+
+```bash
+./backup.sh full          # Full backup semua database
+./backup.sh incremental   # Incremental backup
+./backup.sh differential  # Differential backup
+```
+
+### Verifikasi Backup
+
+**Cek file di Primary:**
+
+```bash
+ls -lh /backup/full/
+```
+
+**Cek integritas checksum:**
+
+```bash
+cd /backup/full/
+md5sum -c *.enc.md5
+```
+
+**Test dekripsi:**
+
+```bash
+source ~/pg-setup/.env-backup
+
+openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -d \
+  -in /backup/full/full_db_kependudukan_*.sql.enc \
+  -out /tmp/test_decrypt.sql \
+  -pass pass:"$BACKUP_AES_PASSPHRASE"
+
+head -20 /tmp/test_decrypt.sql
+rm /tmp/test_decrypt.sql
+```
+
+**Pantau log:**
+
+```bash
+tail -f /backup/logs/backup_*.log
+```
+
+---
+
+## Bagian 5 - Hasil Verifikasi
+
+### Replikasi
+
+| Pengujian | Hasil |
+|---|---|
+| Status WAL streaming | `streaming` |
+| Sinkronisasi data real-time | Berhasil — data di Primary langsung muncul di Replica |
+| Jumlah database tersinkronisasi | 4 database |
+
+### Backup
+
+| Pengujian | Hasil |
+|---|---|
+| Full backup 4 database | Berhasil |
+| Enkripsi AES-256 | Berhasil |
+| Transfer via SSH ke Replica | Berhasil |
+| Test passphrase salah | Ditolak  |
+
+---
