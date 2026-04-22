@@ -7,5 +7,6 @@ Repositori ini menggunakan dokumentasi terpisah per bulan.
 ## Daftar Dokumen
 
 - [Bulan 1 - Setup Infrastructure and Environment](README-BULAN-1.md)
+- [Bulan 2 - Replikasi Data PostgreSQL](README-BULAN-2.md)
 
 
