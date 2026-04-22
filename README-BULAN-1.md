@@ -1,4 +1,4 @@
-# Simulasi Backup dan Recovery Sistem Database - Dokumentasi Bulan 1
+# Setup Infrastructure & Environment (Data Center Modeling) - Dokumentasi Bulan 1
 
 Capstone 11 (Kelompok 2) - Capstone Project  
 Program Studi Ilmu Komputer IPB University 2026

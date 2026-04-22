@@ -1,4 +1,4 @@
-# Replikasi Data PostgreSQL - Dokumentasi Bulan 2
+# Implementasi Strategi Backup & Replikasi - Dokumentasi Bulan 2
 
 Capstone 11 (Kelompok 2) - Capstone Project  
 Program Studi Ilmu Komputer IPB University 2026
