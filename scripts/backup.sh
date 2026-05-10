@@ -19,8 +19,8 @@ PG_USER="admin"
 DATABASES=("db_kependudukan" "db_full" "db_inc" "db_diff")
 
 REPLICA_USER="capstone11"
-REPLICA_IP="192.168.218.11"
-REPLICA_BACKUP_DIR="home/capstone11/backup/received"
+REPLICA_IP="192.168.20.11"
+REPLICA_BACKUP_DIR="/home/capstone11/backup/received"
 SSH_KEY="$HOME/.ssh/backup_key"
 
 # AES-256 passphrase — diambil dari .env-backup
@@ -184,7 +184,7 @@ do_full_backup() {
 
         local encrypted_file=$(encrypt_file "$output_file")
         send_to_replica "$encrypted_file" "full"
-        send_to_replica "${encrypted_file}.md5" "full"
+        send_to_replica "${output_file}.md5" "full"
 
         success_count=$((success_count + 1))
         log "Database $db selesai."
@@ -239,7 +239,7 @@ do_incremental_backup() {
 
     local encrypted_file=$(encrypt_file "$output_file")
     send_to_replica "$encrypted_file" "incremental"
-    send_to_replica "${encrypted_file}.md5" "incremental"
+    send_to_replica "${output_file}.md5" "incremental"
 
     log "============================================"
     log "INCREMENTAL BACKUP SELESAI"
@@ -299,7 +299,7 @@ do_differential_backup() {
 
         local encrypted_file=$(encrypt_file "$output_file")
         send_to_replica "$encrypted_file" "differential"
-        send_to_replica "${encrypted_file}.md5" "differential"
+        send_to_replica "${output_file}.md5" "differential"
 
         success_count=$((success_count + 1))
     done
