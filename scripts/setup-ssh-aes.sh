@@ -3,7 +3,7 @@
 source "$(dirname "$0")/.env-backup"
 
 REPLICA_USER="capstone11"
-REPLICA_IP="192.168.218.11"
+REPLICA_IP="192.168.20.11"
 SSH_KEY="$HOME/.ssh/backup_key"
 
 echo "================================================"
