@@ -11,7 +11,7 @@ Simulasi Backup dan Recovery Sistem Database.
 
 Tujuan Bulan 1 adalah membangun lingkungan simulasi dua site data center:
 - Site A: Pusat Data Bogor (Primary Database)
-- Site B: DRC (Replica Database)
+- Site B: DRC (Replica Database) 
 
 Implementasi menggunakan VMware untuk virtual machine dan Docker PostgreSQL untuk database container.
 
