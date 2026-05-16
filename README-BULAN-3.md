@@ -73,7 +73,7 @@ cd ~/pg-setup
 ./recovery-drill.sh 09
 ```
 ## Evaluasi & Limitasi Sistem (Catatan)
-Sistem ini disimulasikan menggunakan limitasi bawaan (native) dari pg_dump dan pg_basebackup. Dalam lingkungan PostgreSQL Enterprise sesungguhnya:
+Sistem ini disimulasikan menggunakan limitasi bawaan (native) dari `pg_dump` dan `pg_basebackup`. Dalam lingkungan PostgreSQL Enterprise sesungguhnya:
 1. Differential backup secara logika biasanya tidak didukung langsung oleh tools native, sehingga skrip menyimulasikan efeknya dengan modifikasi dump.
-2. Restorasi parsial untuk Incremental backup disimulasikan ke level artefak fisik (.tar.gz.enc).
-3. Penggunaan arsitektur Real-World direkomendasikan menggunakan peranti 3rd-party khusus seperti pgBackRest.
+2. Restorasi parsial untuk Incremental backup disimulasikan ke level artefak fisik `(.tar.gz.enc)`.
+3. Penggunaan arsitektur Real-World direkomendasikan menggunakan peranti 3rd-party khusus seperti `pgBackRest`.
