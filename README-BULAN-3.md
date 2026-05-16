@@ -29,7 +29,7 @@ Menguji bagaimana sistem bereaksi terhadap kondisi abnormal. Mahasiswa berperan 
 ### 2. Skenario Bencana Utama
 * **Skenario DROP TABLE CASCADE**
   * *Tujuan:* Simulasi kehilangan data (*Data Loss*) yang masif akibat *human error* atau SQL *Injection*.
-  * *Mekanisme:* Menghapus tabel `penduduk` yang akan langsung berdampak (*cascade*) pada tabel turunan lainnya (BPJS, Bansos, Layanan Publik).
+  * *Mekanisme:* Tabel layanan_publik, bpjs_kesehatan, bansos_umkm, dan penduduk dihapus paksa dari sistem Primary.
   * *Hasil:* Tabel hilang di Primary `[PASS]`, dan efek replikasi asinkron (*Replication Lag*) merambat ke Replica.
 
 ### 3. Restoration Test (Uji Pemulihan & Downtime Measurement)
@@ -37,15 +37,15 @@ Mengukur RTO (Recovery Time Objective) dari berbagai strategi *backup*. (Pemulih
 
 | Skenario | Target Restore | Data Terpulihkan | RTO (Estimasi Riil) | Integritas (Data Loss) |
 | :--- | :--- | :--- | :--- | :--- |
-| **03 - Recovery Full Backup** | `db_full` | 2.199.747 baris | ~ 49 detik | 0 baris (100% Valid) |
-| **04 - Recovery Differential**| `db_diff` | 2.199.747 baris | ~ 413 detik | 0 baris (100% Valid) |
-| **05 - Recovery Incremental** | `db_inc`  | 2.199.747 baris | ~ 257 detik | 0 baris (100% Valid) |
+| **Recovery Full Backup** | `db_full` | 2.199.747 baris | ~ 49 detik | 0 baris (100% Valid) |
+| **Recovery Differential**| `db_diff` | 2.199.747 baris | ~ 413 detik | 0 baris (100% Valid) |
+| **Recovery Incremental** | `db_inc`  | 2.199.747 baris | ~ 257 detik | 0 baris (100% Valid) |
 
 ### 4. Point-in-Time Recovery & Keamanan Tambahan
-* **Skenario 09: Point-in-Time Recovery (PITR)**
+* **Skenario Point-in-Time Recovery (PITR)**
   * *Tujuan:* Mengembalikan status database persis seperti sebelum gelombang (*batch*) injeksi data masuk (Checkpoint T0).
-  * *Hasil:* Sistem `[PASS]` merestorasi data ke jumlah T0 dengan tepat.
-* **Skenario 08: Uji Keamanan Enkripsi (Passphrase Salah)** *(Aktivitas Bulan 4)*
+  * *Hasil:* Sistem `[PASS]` merestorasi data ke jumlah T0 dengan tepat 2.199.747 baris dan dengan waktu RTO ~ 219 detik.
+* **Skenario Uji Keamanan Enkripsi (Passphrase Salah)** *(Aktivitas Bulan 4)*
   * *Tujuan:* Membuktikan kekuatan enkripsi Data *at-rest*.
   * *Hasil:* Sistem `[PASS]` menolak akses total jika kunci AES-256 (OpenSSL) tidak cocok.
 
